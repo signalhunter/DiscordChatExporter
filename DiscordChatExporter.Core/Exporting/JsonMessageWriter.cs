@@ -96,6 +96,46 @@ internal class JsonMessageWriter(Stream stream, ExportContext context)
         await _writer.FlushAsync(cancellationToken);
     }
 
+    private async ValueTask WriteSnapshotMessageAsync(
+        MessageSnapshot message,
+        CancellationToken cancellationToken = default
+    )
+    {
+        _writer.WriteStartObject();
+
+        _writer.WriteString("type", message.Type.ToString());
+        _writer.WriteString("content", message.Content);
+
+        // Mentions
+        _writer.WriteStartArray("mentions");
+        foreach (var user in message.MentionedUsers)
+            await WriteUserAsync(user, true, cancellationToken);
+
+        _writer.WriteEndArray();
+
+        _writer.WriteStartArray("attachments");
+
+        foreach (var attachment in message.Attachments)
+        {
+            _writer.WriteStartObject();
+
+            _writer.WriteString("id", attachment.Id.ToString());
+            _writer.WriteString(
+                "url",
+                await Context.ResolveAssetUrlAsync(attachment.Url, cancellationToken)
+            );
+            _writer.WriteString("fileName", attachment.FileName);
+            _writer.WriteString("contentType", attachment.ContentType);
+
+            _writer.WriteEndObject();
+        }
+
+        _writer.WriteEndArray();
+
+        _writer.WriteEndObject();
+        await _writer.FlushAsync(cancellationToken);
+    }
+
     private async ValueTask WriteRolesAsync(
         IReadOnlyList<Role> roles,
         CancellationToken cancellationToken = default
@@ -524,6 +564,22 @@ internal class JsonMessageWriter(Stream stream, ExportContext context)
             _writer.WriteString("guildId", message.Reference.GuildId?.ToString());
             _writer.WriteEndObject();
         }
+
+        // Message snapshots
+        _writer.WriteStartArray("snapshots");
+
+        foreach (var snapshot in message.MessageSnapshots)
+        {
+            _writer.WriteStartObject();
+
+            // Emoji
+            _writer.WritePropertyName("message");
+            await WriteSnapshotMessageAsync(snapshot.Message, cancellationToken);
+
+            _writer.WriteEndObject();
+        }
+
+        _writer.WriteEndArray();
 
         // Interaction
         if (message.Interaction is not null)

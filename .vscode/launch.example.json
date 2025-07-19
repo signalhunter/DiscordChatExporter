@@ -1,0 +1,15 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": ".NET 9 Launch Console App",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/DiscordChatExporter.Cli/bin/Debug/net9.0/DiscordChatExporter.Cli.dll",
+      "args": ["export", "-t", "DISCORD_TOKEN", "-c", "DISCORD_CHANNEL", "-f", "Json", "-o", "${workspaceFolder}/DiscordChatExporter.Cli/bin/Debug/net9.0/response.json"],
+      "stopAtEntry": false,
+      "console": "internalConsole"
+    }
+  ]
+}

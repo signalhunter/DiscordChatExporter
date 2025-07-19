@@ -15,6 +15,7 @@ public partial record Attachment(
     string? Description,
     int? Width,
     int? Height,
+    string? ContentType,
     FileSize FileSize
 ) : IHasId
 {
@@ -55,7 +56,8 @@ public partial record Attachment
         var width = json.GetPropertyOrNull("width")?.GetInt32OrNull();
         var height = json.GetPropertyOrNull("height")?.GetInt32OrNull();
         var fileSize = json.GetProperty("size").GetInt64().Pipe(FileSize.FromBytes);
+        var contentType = json.GetPropertyOrNull("content_type")?.GetNonWhiteSpaceStringOrNull();
 
-        return new Attachment(id, url, fileName, description, width, height, fileSize);
+        return new Attachment(id, url, fileName, description, width, height, contentType, fileSize);
     }
 }

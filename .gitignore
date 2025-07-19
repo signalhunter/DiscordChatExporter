@@ -10,3 +10,5 @@ obj/
 
 # Test results
 TestResults/
+
+launch.json
