@@ -26,6 +26,7 @@ public partial record Message(
     IReadOnlyList<Reaction> Reactions,
     IReadOnlyList<User> MentionedUsers,
     MessageReference? Reference,
+    IReadOnlyList<Snapshot> MessageSnapshots,
     Message? ReferencedMessage,
     Interaction? Interaction
 ) : IHasId
@@ -169,6 +170,13 @@ public partial record Message
         var messageReference = json.GetPropertyOrNull("message_reference")
             ?.Pipe(MessageReference.Parse);
         var referencedMessage = json.GetPropertyOrNull("referenced_message")?.Pipe(Parse);
+
+        var messageSnapshots =
+            json.GetPropertyOrNull("message_snapshots")
+                ?.EnumerateArrayOrNull()
+                ?.Select(Snapshot.Parse)
+                .ToArray() ?? [];
+
         var interaction = json.GetPropertyOrNull("interaction")?.Pipe(Interaction.Parse);
 
         return new Message(
@@ -187,8 +195,43 @@ public partial record Message
             reactions,
             mentionedUsers,
             messageReference,
+            messageSnapshots,
             referencedMessage,
             interaction
         );
+    }
+}
+
+public partial record MessageSnapshot(
+    MessageKind Type,
+    string Content,
+    IReadOnlyList<User> MentionedUsers,
+    IReadOnlyList<Attachment> Attachments,
+    DateTimeOffset Timestamp,
+    MessageFlags Flags
+)
+{
+    public static MessageSnapshot Parse(JsonElement json)
+    {
+        var type = json.GetProperty("type").GetInt32().Pipe(t => (MessageKind)t);
+        var content = json.GetPropertyOrNull("content")?.GetStringOrNull() ?? "";
+
+        var mentionedUsers =
+            json.GetPropertyOrNull("mentions")?.EnumerateArrayOrNull()?.Select(User.Parse).ToArray()
+            ?? [];
+
+        var attachments =
+            json.GetPropertyOrNull("attachments")
+                ?.EnumerateArrayOrNull()
+                ?.Select(Attachment.Parse)
+                .ToArray() ?? [];
+
+        var timestamp = json.GetProperty("timestamp").GetDateTimeOffset();
+
+        var flags =
+            json.GetPropertyOrNull("flags")?.GetInt32OrNull()?.Pipe(f => (MessageFlags)f)
+            ?? MessageFlags.None;
+
+        return new MessageSnapshot(type, content, mentionedUsers, attachments, timestamp, flags);
     }
 }
