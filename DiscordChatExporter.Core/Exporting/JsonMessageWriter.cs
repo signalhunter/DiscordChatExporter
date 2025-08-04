@@ -105,16 +105,16 @@ internal class JsonMessageWriter(Stream stream, ExportContext context)
 
         _writer.WriteString("type", message.Type.ToString());
         _writer.WriteString("content", message.Content);
+        _writer.WriteString("editedTimestamp", message.EditedTimestamp);
 
         // Mentions
         _writer.WriteStartArray("mentions");
         foreach (var user in message.MentionedUsers)
             await WriteUserAsync(user, true, cancellationToken);
-
         _writer.WriteEndArray();
 
+        // Attachments
         _writer.WriteStartArray("attachments");
-
         foreach (var attachment in message.Attachments)
         {
             _writer.WriteStartObject();
@@ -129,7 +129,30 @@ internal class JsonMessageWriter(Stream stream, ExportContext context)
 
             _writer.WriteEndObject();
         }
+        _writer.WriteEndArray();
 
+        // Embeds
+        _writer.WriteStartArray("embeds");
+        foreach (var embed in message.Embeds)
+            await WriteEmbedAsync(embed, cancellationToken);
+        _writer.WriteEndArray();
+
+        // Stickers
+        _writer.WriteStartArray("stickers");
+        foreach (var sticker in message.Stickers)
+        {
+            _writer.WriteStartObject();
+
+            _writer.WriteString("id", sticker.Id.ToString());
+            _writer.WriteString("name", sticker.Name);
+            _writer.WriteString("format", sticker.Format.ToString());
+            _writer.WriteString(
+                "sourceUrl",
+                await Context.ResolveAssetUrlAsync(sticker.SourceUrl, cancellationToken)
+            );
+
+            _writer.WriteEndObject();
+        }
         _writer.WriteEndArray();
 
         _writer.WriteEndObject();
@@ -572,7 +595,6 @@ internal class JsonMessageWriter(Stream stream, ExportContext context)
         {
             _writer.WriteStartObject();
 
-            // Emoji
             _writer.WritePropertyName("message");
             await WriteSnapshotMessageAsync(snapshot.Message, cancellationToken);
 

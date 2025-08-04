@@ -62,7 +62,7 @@ public partial record Message(
 
 public partial record Message
 {
-    private static IReadOnlyList<Embed> NormalizeEmbeds(IReadOnlyList<Embed> embeds)
+    public static IReadOnlyList<Embed> NormalizeEmbeds(IReadOnlyList<Embed> embeds)
     {
         if (embeds.Count <= 1)
             return embeds;
@@ -207,7 +207,9 @@ public partial record MessageSnapshot(
     string Content,
     IReadOnlyList<User> MentionedUsers,
     IReadOnlyList<Attachment> Attachments,
-    DateTimeOffset Timestamp,
+    IReadOnlyList<Embed> Embeds,
+    IReadOnlyList<Sticker> Stickers,
+    DateTimeOffset? EditedTimestamp,
     MessageFlags Flags
 )
 {
@@ -226,12 +228,24 @@ public partial record MessageSnapshot(
                 ?.Select(Attachment.Parse)
                 .ToArray() ?? [];
 
-        var timestamp = json.GetProperty("timestamp").GetDateTimeOffset();
+        var embeds = Message.NormalizeEmbeds(
+            json.GetPropertyOrNull("embeds")?.EnumerateArrayOrNull()?.Select(Embed.Parse).ToArray()
+                ?? []
+        );
+
+       var stickers =
+            json.GetPropertyOrNull("sticker_items")
+                ?.EnumerateArrayOrNull()
+                ?.Select(Sticker.Parse)
+                .ToArray() ?? [];
+
+        // only parse the edited timestamp, the original msg timestamp can be inferred via the snowflake
+        var editedTimestamp = json.GetPropertyOrNull("edited_timestamp")?.GetDateTimeOffsetOrNull();
 
         var flags =
             json.GetPropertyOrNull("flags")?.GetInt32OrNull()?.Pipe(f => (MessageFlags)f)
             ?? MessageFlags.None;
 
-        return new MessageSnapshot(type, content, mentionedUsers, attachments, timestamp, flags);
+        return new MessageSnapshot(type, content, mentionedUsers, attachments, embeds, stickers, editedTimestamp, flags);
     }
 }
